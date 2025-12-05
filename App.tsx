@@ -12,12 +12,12 @@ import { AuthModal } from './components/AuthModal'; // Auth import
 import { generateAiFilename } from './services/geminiService';
 import { supabase, getUserProfile, updateUserCredits, upgradeToPremium } from './services/supabase'; // DB Services
 import { LanguageProvider, useLanguage } from './LanguageContext';
-import { 
-  FileItem, 
-  ConversionFormat, 
-  UserStats, 
-  MAX_FREE_CREDITS, 
-  COST_PER_CONVERT, 
+import {
+  FileItem,
+  ConversionFormat,
+  UserStats,
+  MAX_FREE_CREDITS,
+  COST_PER_CONVERT,
   COST_PER_AI_RENAME,
   ENABLE_PREMIUM_SYSTEM
 } from './types';
@@ -31,7 +31,7 @@ declare global {
 function BanaConvertApp() {
   const { t, language, setLanguage } = useLanguage();
   const [files, setFiles] = useState<FileItem[]>([]);
-  
+
   // Auth & User State
   const [session, setSession] = useState<any>(null);
   const [stats, setStats] = useState<UserStats>({
@@ -39,14 +39,14 @@ function BanaConvertApp() {
     isPremium: false,
     lastResetDate: new Date().toISOString().split('T')[0]
   });
-  
+
   // Modals
   const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isAdModalOpen, setIsAdModalOpen] = useState(false);
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false); // Auth Modal
-  
+
   const [legalModalTab, setLegalModalTab] = useState<'privacy' | 'terms' | 'contact'>('privacy');
   const [showScrollTop, setShowScrollTop] = useState(false);
 
@@ -139,15 +139,15 @@ function BanaConvertApp() {
         const isHeic = lowerName.endsWith('.heic') || lowerName.endsWith('.heif');
 
         if (isHeic) {
-           if (window.heic2any) {
-             const convertedBlob = await window.heic2any({ blob: item.file, toType: 'image/jpeg', quality: 0.6 }); // Use lower quality for preview speed
-             const blobToUse = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
-             finalUrl = URL.createObjectURL(blobToUse);
-           } else {
-             throw new Error("HEIC converter library missing");
-           }
+          if (window.heic2any) {
+            const convertedBlob = await window.heic2any({ blob: item.file, toType: 'image/jpeg', quality: 0.6 }); // Use lower quality for preview speed
+            const blobToUse = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+            finalUrl = URL.createObjectURL(blobToUse);
+          } else {
+            throw new Error("HEIC converter library missing");
+          }
         } else {
-           finalUrl = URL.createObjectURL(item.file);
+          finalUrl = URL.createObjectURL(item.file);
         }
 
         setFiles(prev => prev.map(f => f.id === item.id ? { ...f, previewUrl: finalUrl, status: 'idle' } : f));
@@ -188,7 +188,7 @@ function BanaConvertApp() {
       await updateUserCredits(session.user.id, newCredits);
     }
   };
-  
+
   const handleWatchAdReward = () => {
     handleReward(1);
     setIsAdModalOpen(false);
@@ -212,10 +212,10 @@ function BanaConvertApp() {
   const deductCredit = async (cost: number) => {
     if (stats.isPremium) return true;
     if (stats.credits < cost) return false;
-    
+
     const newCredits = stats.credits - cost;
     setStats(prev => ({ ...prev, credits: newCredits }));
-    
+
     if (session) {
       await updateUserCredits(session.user.id, newCredits);
     }
@@ -245,7 +245,7 @@ function BanaConvertApp() {
 
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        
+
         if (!ctx) throw new Error("Canvas context failed");
 
         // High Quality Settings
@@ -275,16 +275,16 @@ function BanaConvertApp() {
           const data = imageData.data;
           const len = data.length;
           const bgTolerance = item.bgRemovalTolerance || 30;
-          
+
           // Euclidean distance threshold for white/light background
           // Optimized for loop
-          const threshold = bgTolerance * 4.4; 
+          const threshold = bgTolerance * 4.4;
 
           for (let i = 0; i < len; i += 4) {
             const r = data[i];
             const g = data[i + 1];
             const b = data[i + 2];
-            
+
             // Grayscale Filter
             if (item.isGrayscale) {
               const gray = (r * 0.299) + (g * 0.587) + (b * 0.114);
@@ -297,8 +297,8 @@ function BanaConvertApp() {
             if (item.removeBackground && item.targetFormat !== ConversionFormat.JPEG) {
               // Calculate distance from white (255, 255, 255)
               const dist = Math.sqrt(
-                (255 - r) * (255 - r) + 
-                (255 - g) * (255 - g) + 
+                (255 - r) * (255 - r) +
+                (255 - g) * (255 - g) +
                 (255 - b) * (255 - b)
               );
 
@@ -318,7 +318,7 @@ function BanaConvertApp() {
         const res = await fetch(dataUrl);
         const blob = await res.blob();
 
-        setFiles(prev => prev.map(f => f.id === id ? { 
+        setFiles(prev => prev.map(f => f.id === id ? {
           ...f, status: 'done', convertedUrl: dataUrl, convertedBlob: blob, convertedSize: blob.size
         } : f));
 
@@ -344,7 +344,7 @@ function BanaConvertApp() {
     try {
       const newName = await generateAiFilename(item.file);
       if (newName) {
-         setFiles(prev => prev.map(f => f.id === id ? { ...f, status: 'idle', aiName: newName } : f));
+        setFiles(prev => prev.map(f => f.id === id ? { ...f, status: 'idle', aiName: newName } : f));
       } else {
         throw new Error("AI failed");
       }
@@ -362,7 +362,7 @@ function BanaConvertApp() {
           <PaymentModal isOpen={isPaymentModalOpen} onClose={() => setIsPaymentModalOpen(false)} onSuccess={handlePaymentSuccess} />
         </>
       )}
-      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} onSuccess={() => {}} />
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} onSuccess={() => { }} />
       <AdVerificationModal isOpen={isAdModalOpen} onClose={() => setIsAdModalOpen(false)} onReward={handleWatchAdReward} />
       <LegalModal isOpen={isLegalModalOpen} onClose={() => setIsLegalModalOpen(false)} initialTab={legalModalTab} />
       <CookieBanner />
@@ -376,7 +376,7 @@ function BanaConvertApp() {
               <svg className="relative w-10 h-10 drop-shadow-xl" viewBox="0 0 100 100" fill="none">
                 <defs><linearGradient id="logoGrad" x1="0" x2="1" y1="0" y2="1"><stop offset="0%" stopColor="#6366f1" /><stop offset="100%" stopColor="#a855f7" /></linearGradient></defs>
                 <path d="M20 15 L40 75 L50 90 L60 75 L80 15 L65 15 L50 60 L35 15 Z" fill="url(#logoGrad)" />
-                <rect x="45" y="5" width="10" height="10" fill="#facc15" className="animate-bounce" style={{animationDuration: '2s'}} />
+                <rect x="45" y="5" width="10" height="10" fill="#facc15" className="animate-bounce" style={{ animationDuration: '2s' }} />
               </svg>
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-white hidden sm:block">
@@ -386,8 +386,8 @@ function BanaConvertApp() {
 
           <div className="flex items-center gap-6">
             <div className="flex bg-slate-800 rounded-lg p-1 border border-slate-700">
-               <button onClick={() => setLanguage('tr')} className={`px-2 py-1 text-xs font-bold rounded ${language === 'tr' ? 'bg-indigo-600 text-white' : 'text-slate-400'}`}>TR</button>
-               <button onClick={() => setLanguage('en')} className={`px-2 py-1 text-xs font-bold rounded ${language === 'en' ? 'bg-indigo-600 text-white' : 'text-slate-400'}`}>EN</button>
+              <button onClick={() => setLanguage('tr')} className={`px-2 py-1 text-xs font-bold rounded ${language === 'tr' ? 'bg-indigo-600 text-white' : 'text-slate-400'}`}>TR</button>
+              <button onClick={() => setLanguage('en')} className={`px-2 py-1 text-xs font-bold rounded ${language === 'en' ? 'bg-indigo-600 text-white' : 'text-slate-400'}`}>EN</button>
             </div>
 
             {session ? (
@@ -396,16 +396,16 @@ function BanaConvertApp() {
                   {stats.isPremium ? 'Premium' : session.user.email?.split('@')[0]}
                 </span>
                 <div className="flex items-center gap-2">
-                   <div className={`h-2 w-2 rounded-full ${stats.credits > 0 ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
-                   <span className="font-mono text-white font-bold text-lg">{stats.isPremium ? '∞' : stats.credits}</span>
+                  <div className={`h-2 w-2 rounded-full ${stats.credits > 0 ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
+                  <span className="font-mono text-white font-bold text-lg">{stats.isPremium ? '∞' : stats.credits}</span>
                 </div>
               </div>
             ) : (
-               <div className="flex flex-col items-end mr-2">
-                 <button onClick={() => setIsAuthModalOpen(true)} className="text-xs text-indigo-400 hover:text-white underline">
-                    {t('daily_credits')}: {stats.credits} (Giriş Yap)
-                 </button>
-               </div>
+              <div className="flex flex-col items-end mr-2">
+                <button onClick={() => setIsAuthModalOpen(true)} className="text-xs text-indigo-400 hover:text-white underline">
+                  {t('daily_credits')}: {stats.credits} (Giriş Yap)
+                </button>
+              </div>
             )}
 
             {/* Logout or Premium Button */}
@@ -414,7 +414,7 @@ function BanaConvertApp() {
             ) : null}
 
             {ENABLE_PREMIUM_SYSTEM && !stats.isPremium && (
-              <button 
+              <button
                 onClick={() => setIsPremiumModalOpen(true)}
                 className="group relative px-6 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 rounded-lg text-white font-bold text-sm shadow-lg overflow-hidden"
               >
@@ -428,24 +428,24 @@ function BanaConvertApp() {
 
       {/* Main Content Area */}
       <main className="max-w-7xl mx-auto p-4 md:p-8 flex flex-col lg:flex-row gap-8 mt-6 flex-grow">
-        
+
         {/* Left: Upload & Files */}
         <div className="flex-1 flex flex-col gap-8">
           <section className="glass-panel rounded-2xl p-1 shadow-2xl animate-[fadeIn_0.5s]">
-            <Dropzone 
-              onFilesAdded={handleFilesAdded} 
-              disabled={!stats.isPremium && stats.credits <= 0 && files.length === 0} 
+            <Dropzone
+              onFilesAdded={handleFilesAdded}
+              disabled={!stats.isPremium && stats.credits <= 0 && files.length === 0}
             />
           </section>
 
           <div className="space-y-4">
             {files.length > 0 && (
-               <div className="flex items-center justify-between mb-2 px-2">
-                  <h3 className="text-lg font-semibold text-white">{t('queue')} ({files.length})</h3>
-                  <button onClick={() => setFiles([])} className="text-xs text-red-400 hover:text-red-300">{t('clear_all')}</button>
-               </div>
+              <div className="flex items-center justify-between mb-2 px-2">
+                <h3 className="text-lg font-semibold text-white">{t('queue')} ({files.length})</h3>
+                <button onClick={() => setFiles([])} className="text-xs text-red-400 hover:text-red-300">{t('clear_all')}</button>
+              </div>
             )}
-            
+
             {files.map(file => (
               <div key={file.id} className="bg-[#151f32] border border-slate-700/50 rounded-xl p-5 relative">
                 <div className="flex flex-col lg:flex-row gap-6">
@@ -487,32 +487,32 @@ function BanaConvertApp() {
                           ))}
                         </div>
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                            <button onClick={() => updateFileConfig(file.id, 'rotation', (file.rotation + 90) % 360)} className="bg-slate-800 p-2 rounded text-xs border border-slate-700">{t('rotate')}: {file.rotation}°</button>
-                            <button onClick={() => updateFileConfig(file.id, 'isGrayscale', !file.isGrayscale)} className={`p-2 rounded text-xs border ${file.isGrayscale ? 'bg-slate-600' : 'bg-slate-800'}`}>{t('grayscale')}</button>
-                            <select onChange={(e) => updateFileConfig(file.id, 'resizeScale', parseFloat(e.target.value))} className="bg-slate-800 text-xs border border-slate-700 rounded p-2">
-                              <option value="1">100%</option><option value="0.75">75%</option><option value="0.5">50%</option><option value="0.25">25%</option>
-                            </select>
+                          <button onClick={() => updateFileConfig(file.id, 'rotation', (file.rotation + 90) % 360)} className="bg-slate-800 p-2 rounded text-xs border border-slate-700">{t('rotate')}: {file.rotation}°</button>
+                          <button onClick={() => updateFileConfig(file.id, 'isGrayscale', !file.isGrayscale)} className={`p-2 rounded text-xs border ${file.isGrayscale ? 'bg-slate-600' : 'bg-slate-800'}`}>{t('grayscale')}</button>
+                          <select onChange={(e) => updateFileConfig(file.id, 'resizeScale', parseFloat(e.target.value))} className="bg-slate-800 text-xs border border-slate-700 rounded p-2">
+                            <option value="1">100%</option><option value="0.75">75%</option><option value="0.5">50%</option><option value="0.25">25%</option>
+                          </select>
                         </div>
                         {file.targetFormat !== ConversionFormat.JPEG && (
                           <div className="flex items-center gap-2">
-                             <button onClick={() => updateFileConfig(file.id, 'removeBackground', !file.removeBackground)} className={`text-xs p-1 rounded ${file.removeBackground ? 'text-pink-400' : 'text-slate-500'}`}>Remove BG</button>
-                             {file.removeBackground && <input type="range" min="0" max="80" value={file.bgRemovalTolerance} onChange={(e) => updateFileConfig(file.id, 'bgRemovalTolerance', parseInt(e.target.value))} className="w-24 h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-pink-500" />}
+                            <button onClick={() => updateFileConfig(file.id, 'removeBackground', !file.removeBackground)} className={`text-xs p-1 rounded ${file.removeBackground ? 'text-pink-400' : 'text-slate-500'}`}>Remove BG</button>
+                            {file.removeBackground && <input type="range" min="0" max="80" value={file.bgRemovalTolerance} onChange={(e) => updateFileConfig(file.id, 'bgRemovalTolerance', parseInt(e.target.value))} className="w-24 h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-pink-500" />}
                           </div>
                         )}
                       </div>
                     )}
 
                     <div className="mt-2 flex justify-end gap-3">
-                       {file.status === 'idle' && (
-                         <button onClick={() => convertImage(file.id)} className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded-lg text-sm font-bold shadow-lg shadow-indigo-500/30">
-                           {t('convert_btn')}
-                         </button>
-                       )}
-                       {file.status === 'done' && (
-                         <a href={file.convertedUrl} download={`${file.aiName || file.file.name.split('.')[0]}.${file.targetFormat.split('/')[1]}`} className="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2">
-                           {t('download_btn')} ({formatFileSize(file.convertedSize || 0)})
-                         </a>
-                       )}
+                      {file.status === 'idle' && (
+                        <button onClick={() => convertImage(file.id)} className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded-lg text-sm font-bold shadow-lg shadow-indigo-500/30">
+                          {t('convert_btn')}
+                        </button>
+                      )}
+                      {file.status === 'done' && (
+                        <a href={file.convertedUrl} download={`${file.aiName || file.file.name.split('.')[0]}.${file.targetFormat.split('/')[1]}`} className="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2">
+                          {t('download_btn')} ({formatFileSize(file.convertedSize || 0)})
+                        </a>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -522,8 +522,37 @@ function BanaConvertApp() {
                 </div>}
               </div>
             ))}
-            
+
             {files.length > 0 && <div className="mt-8"><AdBanner variant="horizontal" /></div>}
+
+            {files.some(f => f.status === 'done') && (
+              <div className="mt-4 flex justify-center">
+                <button
+                  onClick={async () => {
+                    const JSZip = (await import('jszip')).default;
+                    const { saveAs } = (await import('file-saver'));
+                    const zip = new JSZip();
+
+                    let count = 0;
+                    for (const file of files) {
+                      if (file.status === 'done' && file.convertedBlob) {
+                        const fileName = `${file.aiName || file.file.name.split('.')[0]}.${file.targetFormat.split('/')[1]}`;
+                        zip.file(fileName, file.convertedBlob);
+                        count++;
+                      }
+                    }
+
+                    if (count > 0) {
+                      const content = await zip.generateAsync({ type: "blob" });
+                      saveAs(content, "vormpixyze_images.zip");
+                    }
+                  }}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-indigo-500/30 flex items-center gap-2 transition-transform hover:scale-105"
+                >
+                  📦 {t('download_all_zip') || 'Download All (ZIP)'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -545,9 +574,9 @@ function BanaConvertApp() {
           </div>
         </div>
       </main>
-      
+
       {showScrollTop && <button onClick={scrollToTop} className="fixed bottom-24 right-6 z-40 p-3 rounded-full bg-indigo-600/80 text-white shadow-lg">↑</button>}
-      
+
       <footer className="mt-20 border-t border-slate-800 bg-[#0B0F19] py-10">
         <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-6">
           <span className="font-bold text-lg text-white">VormPixyze</span>

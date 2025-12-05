@@ -9,12 +9,12 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "https://via.placeholder.com/192x192.png/4f46e5/ffffff?text=V",
+      "src": "/icon-192.png",
       "type": "image/png",
       "sizes": "192x192"
     },
     {
-      "src": "https://via.placeholder.com/512x512.png/4f46e5/ffffff?text=VormPixyze",
+      "src": "/icon-512.png",
       "type": "image/png",
       "sizes": "512x512"
     }
