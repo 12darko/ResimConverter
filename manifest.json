@@ -1,0 +1,22 @@
+{
+  "name": "VormPixyze - AI Image Converter",
+  "short_name": "VormPixyze",
+  "description": "Professional HEIC, JPG, PNG converter with AI tools.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0B0F19",
+  "theme_color": "#4f46e5",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://via.placeholder.com/192x192.png/4f46e5/ffffff?text=V",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "https://via.placeholder.com/512x512.png/4f46e5/ffffff?text=VormPixyze",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ]
+}
