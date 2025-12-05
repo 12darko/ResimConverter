@@ -10,7 +10,7 @@ export interface FileItem {
   previewUrl: string;
   targetFormat: ConversionFormat;
   quality: number; // 0.1 to 1.0
-  
+
   // Advanced Processing Options
   rotation: 0 | 90 | 180 | 270;
   resizeScale: 1 | 0.75 | 0.5 | 0.25;
@@ -18,11 +18,15 @@ export interface FileItem {
   removeBackground: boolean; // Simple white-bg removal for PNG/WEBP
   bgRemovalTolerance: number; // 0 to 100 threshold
 
+  // New Advanced Features
+  targetSizeBytes?: number; // Desired max size in bytes
+  watermarkText?: string;
+
   status: 'idle' | 'converting' | 'analyzing' | 'done' | 'error';
   convertedBlob?: Blob;
   convertedUrl?: string;
   convertedSize?: number; // bytes
-  aiName?: string; 
+  aiName?: string;
   errorMsg?: string;
 }
 

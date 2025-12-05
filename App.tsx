@@ -8,6 +8,7 @@ import { PaymentModal } from './components/PaymentModal';
 import { LegalModal } from './components/LegalModal';
 import { CookieBanner } from './components/CookieBanner';
 import { AdVerificationModal } from './components/AdVerificationModal';
+import { CompareSlider } from './components/CompareSlider';
 import { AuthModal } from './components/AuthModal'; // Auth import
 import { generateAiFilename } from './services/geminiService';
 import { supabase, getUserProfile, updateUserCredits, upgradeToPremium } from './services/supabase'; // DB Services
@@ -31,6 +32,7 @@ declare global {
 function BanaConvertApp() {
   const { t, language, setLanguage } = useLanguage();
   const [files, setFiles] = useState<FileItem[]>([]);
+  const [compareItem, setCompareItem] = useState<FileItem | null>(null);
 
   // Auth & User State
   const [session, setSession] = useState<any>(null);
@@ -160,6 +162,11 @@ function BanaConvertApp() {
 
   const removeFile = (id: string) => setFiles(prev => prev.filter(f => f.id !== id));
   const updateFileConfig = (id: string, key: keyof FileItem, value: any) => {
+    // Premium check for Watermark
+    if (key === 'watermarkText' && !stats.isPremium && value) {
+      setIsPremiumModalOpen(true);
+      return;
+    }
     setFiles(prev => prev.map(f => f.id === id ? { ...f, [key]: value } : f));
   };
 
@@ -277,7 +284,6 @@ function BanaConvertApp() {
           const bgTolerance = item.bgRemovalTolerance || 30;
 
           // Euclidean distance threshold for white/light background
-          // Optimized for loop
           const threshold = bgTolerance * 4.4;
 
           for (let i = 0; i < len; i += 4) {
@@ -295,7 +301,6 @@ function BanaConvertApp() {
 
             // Simple Magic Eraser (White/Light BG Removal)
             if (item.removeBackground && item.targetFormat !== ConversionFormat.JPEG) {
-              // Calculate distance from white (255, 255, 255)
               const dist = Math.sqrt(
                 (255 - r) * (255 - r) +
                 (255 - g) * (255 - g) +
@@ -305,7 +310,6 @@ function BanaConvertApp() {
               if (dist < threshold) {
                 data[i + 3] = 0; // Transparent
               } else if (dist < threshold + 20) {
-                // Feathering for smooth edges
                 const alpha = (dist - threshold) / 20;
                 data[i + 3] = Math.floor(255 * alpha);
               }
@@ -314,9 +318,35 @@ function BanaConvertApp() {
           ctx.putImageData(imageData, 0, 0);
         }
 
-        const dataUrl = canvas.toDataURL(item.targetFormat, item.quality);
-        const res = await fetch(dataUrl);
-        const blob = await res.blob();
+        // --- WATERMARK (Premium) ---
+        if (item.watermarkText && stats.isPremium) {
+          ctx.save();
+          ctx.font = `bold ${Math.floor(canvas.width * 0.05)}px sans-serif`;
+          ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.translate(canvas.width / 2, canvas.height / 2);
+          ctx.rotate(-45 * Math.PI / 180);
+          ctx.fillText(item.watermarkText, 0, 0);
+          ctx.restore();
+        }
+
+        let dataUrl = canvas.toDataURL(item.targetFormat, item.quality);
+        let blob = await (await fetch(dataUrl)).blob();
+
+        // --- TARGET SIZE OPTIMIZATION (Binary Search / Reduction) ---
+        if (item.targetSizeBytes && item.targetSizeBytes > 0 && item.targetFormat === ConversionFormat.JPEG) {
+          let currentQuality = item.quality;
+          let attempts = 0;
+
+          // Simple loop to reduce quality if too big
+          while (blob.size > item.targetSizeBytes && currentQuality > 0.1 && attempts < 10) {
+            currentQuality -= 0.1;
+            dataUrl = canvas.toDataURL(item.targetFormat, currentQuality);
+            blob = await (await fetch(dataUrl)).blob();
+            attempts++;
+          }
+        }
 
         setFiles(prev => prev.map(f => f.id === id ? {
           ...f, status: 'done', convertedUrl: dataUrl, convertedBlob: blob, convertedSize: blob.size
@@ -492,7 +522,30 @@ function BanaConvertApp() {
                           <select onChange={(e) => updateFileConfig(file.id, 'resizeScale', parseFloat(e.target.value))} className="bg-slate-800 text-xs border border-slate-700 rounded p-2">
                             <option value="1">100%</option><option value="0.75">75%</option><option value="0.5">50%</option><option value="0.25">25%</option>
                           </select>
+
+                          {/* NEW: Target Size */}
+                          {file.targetFormat === ConversionFormat.JPEG && (
+                            <input
+                              type="number"
+                              placeholder="Max KB (Optional)"
+                              className="bg-slate-800 text-xs border border-slate-700 rounded p-2 w-full text-white placeholder-slate-500"
+                              onChange={(e) => updateFileConfig(file.id, 'targetSizeBytes', e.target.value ? parseInt(e.target.value) * 1024 : undefined)}
+                            />
+                          )}
                         </div>
+
+                        {/* NEW: Watermark (Premium) */}
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            placeholder={stats.isPremium ? "Watermark Text" : "Watermark (Premium Only)"}
+                            disabled={!stats.isPremium}
+                            value={file.watermarkText || ''}
+                            onChange={(e) => updateFileConfig(file.id, 'watermarkText', e.target.value)}
+                            className={`bg-slate-800 text-xs border border-slate-700 rounded p-2 flex-grow ${!stats.isPremium ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          />
+                        </div>
+
                         {file.targetFormat !== ConversionFormat.JPEG && (
                           <div className="flex items-center gap-2">
                             <button onClick={() => updateFileConfig(file.id, 'removeBackground', !file.removeBackground)} className={`text-xs p-1 rounded ${file.removeBackground ? 'text-pink-400' : 'text-slate-500'}`}>Remove BG</button>
@@ -509,9 +562,17 @@ function BanaConvertApp() {
                         </button>
                       )}
                       {file.status === 'done' && (
-                        <a href={file.convertedUrl} download={`${file.aiName || file.file.name.split('.')[0]}.${file.targetFormat.split('/')[1]}`} className="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2">
-                          {t('download_btn')} ({formatFileSize(file.convertedSize || 0)})
-                        </a>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setCompareItem(file)}
+                            className="bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded-lg text-xs"
+                          >
+                            👁️ Compare
+                          </button>
+                          <a href={file.convertedUrl} download={`${file.aiName || file.file.name.split('.')[0]}.${file.targetFormat.split('/')[1]}`} className="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2">
+                            {t('download_btn')} ({formatFileSize(file.convertedSize || 0)})
+                          </a>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -576,6 +637,16 @@ function BanaConvertApp() {
       </main>
 
       {showScrollTop && <button onClick={scrollToTop} className="fixed bottom-24 right-6 z-40 p-3 rounded-full bg-indigo-600/80 text-white shadow-lg">↑</button>}
+
+      {compareItem && compareItem.convertedUrl && (
+        <CompareSlider
+          originalUrl={compareItem.previewUrl}
+          convertedUrl={compareItem.convertedUrl}
+          onClose={() => setCompareItem(null)}
+        />
+      )}
+
+
 
       <footer className="mt-20 border-t border-slate-800 bg-[#0B0F19] py-10">
         <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-6">
